@@ -6,6 +6,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
@@ -14,13 +15,30 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
+import java.io.IOException
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
+    val LOCAL_URL = "http://xxx.xxx.x.xxx:xxxx"
+    val LOCAL_POST_URL = "$LOCAL_URL/create"
+
     private lateinit var mSensorMan : SensorManager
     val sensorType: Int = Sensor.TYPE_PROXIMITY
     private lateinit var txtView: TextView
     private lateinit var postBtn: Button
+
+    //    final static String AWS_API_URL = "https://mlx2dd3d5b.execute-api.us-east-2.amazonaws.com/v1";
+    //    final static String AWS_API_POST = AWS_API_URL + "/mon-post";
+    //    final static String AWS_API_GET = AWS_API_URL + "/mon-get";
+    private var mClient: OkHttpClient? = null
 
     private val mListener: SensorEventListener = object : SensorEventListener {
         @RequiresApi(api = Build.VERSION_CODES.N)
@@ -55,6 +73,7 @@ class MainActivity : AppCompatActivity() {
         postBtn = findViewById(R.id.postText)
         postBtn.setOnClickListener { processEvent() }
         postBtn.visibility = View.GONE
+        mClient = OkHttpClient()
     }
 
     override fun onPause() {
@@ -64,7 +83,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        mSensorMan.registerListener(mListener, mSensorMan.getDefaultSensor(sensorType), SensorManager.SENSOR_DELAY_GAME)
+        mSensorMan.registerListener(
+            mListener,
+            mSensorMan.getDefaultSensor(sensorType),
+            SensorManager.SENSOR_DELAY_GAME
+        )
     }
 
     private fun generateReg(): String? {
@@ -92,5 +115,66 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, txtView.getText(), Toast.LENGTH_LONG).show()
         txtView.setText("")
         postBtn.visibility = View.GONE
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    @Throws(IOException::class, JSONException::class)
+    private fun requestItem() {
+        val request: Request = Request.Builder()
+            .url(LOCAL_URL + if (0 > 0) "/get/" + 0 else "/all")
+            .build()
+        mClient?.newCall(request)?.execute().use { response ->
+            val toReturn: String = Objects.requireNonNull(response?.body)!!.string()
+            handleResponse("requestAll", toReturn)
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    @Throws(IOException::class, JSONException::class)
+    private fun postMessage(txt: String) {
+        val body: RequestBody = txt.toRequestBody("application/text; charset=utf-8".toMediaType())
+        val request: Request = Request.Builder()
+            .url(LOCAL_POST_URL)
+            .post(body)
+            .build()
+        mClient?.newCall(request)!!.execute().use { response ->
+            Objects.requireNonNull(response.body)?.let {
+                handleResponse(
+                    "postMessage",
+                    it.string()
+                )
+            }
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.N)
+    @Throws(JSONException::class)
+    private fun handleResponse(src: String, response: String) {
+        val builder = StringBuilder()
+        val all: MutableList<String?> = ArrayList()
+        if (src == "requestAll") {
+            val items = JSONArray(response)[0] as JSONArray
+            for (c in 0 until items.length()) {
+                all.add(items[c].toString())
+            }
+            // ensure the last inserted item is brought to the front of the list
+            Collections.reverse(all)
+            builder.append(all.stream().reduce(
+                ""
+            ) { s: String?, t: String? ->
+                """
+                $s
+                $t
+                """.trimIndent()
+            })
+        }
+        if (src == "requestItem") {
+            builder.append(JSONObject(response).toString()).append('\n')
+        }
+        if (src == "postMessage") {
+            builder.append(response)
+        }
+        //        output(builder.toString());
+        Log.i(resources.getString(R.string.app_name), "processResponse: $builder")
     }
 }

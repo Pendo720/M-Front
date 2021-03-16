@@ -15,6 +15,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.res.ResourcesCompat
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -27,7 +28,7 @@ import java.io.IOException
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
-    val LOCAL_URL = "http://xxx.xxx.x.xxx:xxxx"
+    val LOCAL_URL = ""
     val LOCAL_POST_URL = "$LOCAL_URL/create"
 
     private lateinit var mSensorMan : SensorManager
@@ -55,8 +56,16 @@ class MainActivity : AppCompatActivity() {
         override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        supportActionBar!!.setHomeAsUpIndicator(
+            ResourcesCompat.getDrawable(
+                resources,
+                R.mipmap.ic_launcher,
+                null
+            )
+        )
         @Suppress("DEPRECATION")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.insetsController?.hide(WindowInsets.Type.statusBars())
@@ -111,10 +120,21 @@ class MainActivity : AppCompatActivity() {
         return toReturn
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     private fun processEvent(){
-        Toast.makeText(this, txtView.getText(), Toast.LENGTH_LONG).show()
+        var txt = txtView.getText().toString()
+        Toast.makeText(this, txt, Toast.LENGTH_LONG).show()
         txtView.setText("")
         postBtn.visibility = View.GONE
+        Thread {
+            try {
+                postMessage(txt)
+            } catch (e: IOException) {
+                e.printStackTrace()
+            } catch (e: JSONException) {
+                e.printStackTrace()
+            }
+        }.start()
     }
 
     @RequiresApi(api = Build.VERSION_CODES.N)

@@ -28,7 +28,7 @@ import java.io.IOException
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
-    val LOCAL_URL = ""
+    val LOCAL_URL = "http://192.168.1.108:8080"
     val LOCAL_POST_URL = "$LOCAL_URL/create"
 
     private lateinit var mSensorMan : SensorManager
@@ -59,20 +59,16 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.N)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        supportActionBar!!.setHomeAsUpIndicator(
-            ResourcesCompat.getDrawable(
-                resources,
-                R.mipmap.ic_launcher,
-                null
-            )
-        )
+        //        mContext = MainActivity.this;
+        Objects.requireNonNull(supportActionBar)!!.setDisplayHomeAsUpEnabled(true)
+        supportActionBar!!.setHomeAsUpIndicator(ResourcesCompat.getDrawable(resources, R.mipmap.ic_launcher, null))
         @Suppress("DEPRECATION")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.insetsController?.hide(WindowInsets.Type.statusBars())
         } else {
             window.setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN
             )
         }
 
@@ -93,9 +89,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         mSensorMan.registerListener(
-            mListener,
-            mSensorMan.getDefaultSensor(sensorType),
-            SensorManager.SENSOR_DELAY_GAME
+                mListener,
+                mSensorMan.getDefaultSensor(sensorType),
+                SensorManager.SENSOR_DELAY_GAME
         )
     }
 
@@ -123,9 +119,6 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.N)
     private fun processEvent(){
         var txt = txtView.getText().toString()
-        Toast.makeText(this, txt, Toast.LENGTH_LONG).show()
-        txtView.setText("")
-        postBtn.visibility = View.GONE
         Thread {
             try {
                 postMessage(txt)
@@ -160,8 +153,8 @@ class MainActivity : AppCompatActivity() {
         mClient?.newCall(request)!!.execute().use { response ->
             Objects.requireNonNull(response.body)?.let {
                 handleResponse(
-                    "postMessage",
-                    it.string()
+                        "postMessage",
+                        it.string()
                 )
             }
         }
@@ -180,7 +173,7 @@ class MainActivity : AppCompatActivity() {
             // ensure the last inserted item is brought to the front of the list
             Collections.reverse(all)
             builder.append(all.stream().reduce(
-                ""
+                    ""
             ) { s: String?, t: String? ->
                 """
                 $s
@@ -194,6 +187,13 @@ class MainActivity : AppCompatActivity() {
         if (src == "postMessage") {
             builder.append(response)
         }
+
+        runOnUiThread(Runnable {
+            txtView.setText("")
+            postBtn.visibility = View.GONE
+            Toast.makeText(this, response, Toast.LENGTH_LONG).show()
+        });
+
         //        output(builder.toString());
         Log.i(resources.getString(R.string.app_name), "processResponse: $builder")
     }

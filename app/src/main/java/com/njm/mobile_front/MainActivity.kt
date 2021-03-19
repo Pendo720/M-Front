@@ -16,6 +16,8 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
+import androidx.lifecycle.ViewModelProvider
+import com.njm.mobile_front.ui.FacadeModelView
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -36,9 +38,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var txtView: TextView
     private lateinit var postBtn: Button
 
-    //    final static String AWS_API_URL = "https://mlx2dd3d5b.execute-api.us-east-2.amazonaws.com/v1";
-    //    final static String AWS_API_POST = AWS_API_URL + "/mon-post";
-    //    final static String AWS_API_GET = AWS_API_URL + "/mon-get";
+    var mData: String? = null;
+    var mFacade: FacadeModelView? = null
     private var mClient: OkHttpClient? = null
 
     private val mListener: SensorEventListener = object : SensorEventListener {
@@ -47,7 +48,8 @@ class MainActivity : AppCompatActivity() {
             if (event.sensor.type == sensorType) {
                 /* update the display to show the new values */
                 if (event.values[0] == 0F) {
-                    txtView.text = generateReg()
+                    mData = generateReg()
+                    mFacade?.getFacade()?.postValue(mData)
                     postBtn.visibility = View.VISIBLE
                 }
             }
@@ -59,7 +61,6 @@ class MainActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.N)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //        mContext = MainActivity.this;
         Objects.requireNonNull(supportActionBar)!!.setDisplayHomeAsUpEnabled(true)
         supportActionBar!!.setHomeAsUpIndicator(ResourcesCompat.getDrawable(resources, R.mipmap.ic_launcher, null))
         @Suppress("DEPRECATION")
@@ -78,6 +79,13 @@ class MainActivity : AppCompatActivity() {
         postBtn = findViewById(R.id.postText)
         postBtn.setOnClickListener { processEvent() }
         postBtn.visibility = View.GONE
+        mFacade = ViewModelProvider(this)[FacadeModelView::class.java]
+        this.mFacade!!.getFacade().observe(
+            this,
+            {
+                this.mData?.let { it1 -> this.txtView.text = it1 }
+            })
+        this.mFacade!!.getFacade().postValue(mData)
         mClient = OkHttpClient()
     }
 
@@ -189,12 +197,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         runOnUiThread(Runnable {
-            txtView.setText("")
+            mData = ""
+            mFacade?.getFacade()?.postValue(mData)
             postBtn.visibility = View.GONE
             Toast.makeText(this, response, Toast.LENGTH_LONG).show()
         });
 
-        //        output(builder.toString());
         Log.i(resources.getString(R.string.app_name), "processResponse: $builder")
     }
 }

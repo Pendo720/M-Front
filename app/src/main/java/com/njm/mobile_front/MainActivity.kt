@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity() {
         @RequiresApi(api = Build.VERSION_CODES.N)
         override fun onSensorChanged(event: SensorEvent) {
             if (event.sensor.type == sensorType) {
-                /* update the display to show the new values */
+                /* update the ui to show the changes */
                 if (event.values[0] == 0F) {
                     mData = generateReg()
                     mFacade?.getFacade()?.postValue(mData)
